@@ -2,96 +2,186 @@
 
 **Mata Kuliah**: Sistem Operasi
 **Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
+**Nama**: Radika Rismawati Tri Prasaja
+**NIM**: 240202905
 **Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
+# 🧪 Modul 2 — Penjadwalan CPU Lanjutan (Priority Scheduling Non-Preemptive)
+
+## 🎯 Tujuan
+
+Mengubah algoritma penjadwalan proses di `xv6-public` dari **Round Robin** menjadi **Non-Preemptive Priority Scheduling**, dengan:
+
+* Menambahkan field `priority` pada setiap proses
+* Menambahkan syscall `set_priority(int)` untuk mengatur prioritas proses
+* Memodifikasi scheduler agar selalu menjalankan proses RUNNABLE dengan prioritas tertinggi
 
 ---
 
-## 📌 Deskripsi Singkat Tugas
+## 🗂️ File yang Diubah
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
-
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
----
-
-## 🛠️ Rincian Implementasi
-
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
-
-### Contoh untuk Modul 1:
-
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
----
-
-## ✅ Uji Fungsionalitas
-
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
-
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+| File        | Perubahan                                     |
+| ----------- | --------------------------------------------- |
+| `proc.h`    | Tambahkan field `priority` ke struct proc     |
+| `proc.c`    | Modifikasi fungsi `scheduler()`               |
+| `sysproc.c` | Tambahkan implementasi syscall `set_priority` |
+| `syscall.h` | Tambahkan nomor syscall                       |
+| `syscall.c` | Registrasikan syscall                         |
+| `user.h`    | Deklarasi syscall                             |
+| `usys.S`    | Entri syscall                                 |
+| `Makefile`  | Tambah program uji `ptest.c`                  |
 
 ---
 
-## 📷 Hasil Uji
+## 🧩 Rincian Implementasi
 
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
+### 🔹 1. Tambahkan `priority` ke `struct proc`
 
-### 📍 Contoh Output `cowtest`:
-
-```
-Child sees: Y
-Parent sees: X
+```c
+int priority; // nilai prioritas (0 = tertinggi, 100 = terendah)
 ```
 
-### 📍 Contoh Output `shmtest`:
+### 🔹 2. Inisialisasi `priority` di `allocproc()`
 
-```
-Child reads: A
-Parent reads: B
-```
-
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
+```c
+p->priority = 60; // nilai default
 ```
 
-Jika ada screenshot:
+### 🔹 3. Implementasi syscall `set_priority(int)`
 
+#### a. `syscall.h`
+```c
+#define SYS_set_priority 24
 ```
-![hasil cowtest](./screenshots/cowtest_output.png)
+
+#### b. `user.h`
+```c
+int set_priority(int priority);
+```
+
+#### c. `usys.S`
+```asm
+SYSCALL(set_priority)
+```
+
+#### d. `syscall.c`
+```c
+extern int sys_set_priority(void);
+[SYS_set_priority] sys_set_priority,
+```
+
+#### e. `sysproc.c`
+```c
+int sys_set_priority(void) {
+  int prio;
+  if (argint(0, &prio) < 0 || prio < 0 || prio > 100)
+    return -1;
+  myproc()->priority = prio;
+  return 0;
+}
+```
+
+### 🔹 4. Modifikasi scheduler di `proc.c`
+
+```c
+void scheduler(void) {
+  struct proc *p;
+  struct proc *highest = 0;
+
+  for(;;){
+    sti();
+    acquire(&ptable.lock);
+    highest = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+      if(highest == 0 || p->priority < highest->priority)
+        highest = p;
+    }
+
+    if(highest != 0){
+      p = highest;
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+      proc = 0;
+    }
+
+    release(&ptable.lock);
+  }
+}
+```
+
+### 🔹 5. Program Uji: `ptest.c`
+
+```c
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+
+void busy() {
+  for (volatile int i = 0; i < 100000000; i++);
+}
+
+int main() {
+  int pid1 = fork();
+  if (pid1 == 0) {
+    set_priority(90); // prioritas rendah
+    busy();
+    printf(1, "Child 1 selesai\n");
+    exit();
+  }
+
+  int pid2 = fork();
+  if (pid2 == 0) {
+    set_priority(10); // prioritas tinggi
+    busy();
+    printf(1, "Child 2 selesai\n");
+    exit();
+  }
+
+  wait(); wait();
+  printf(1, "Parent selesai\n");
+  exit();
+}
+```
+
+### 🔹 6. Tambah `ptest` ke Makefile
+
+```make
+  _ptest\
 ```
 
 ---
 
-## ⚠️ Kendala yang Dihadapi
+## ✅ Validasi & Hasil Uji
 
-Tuliskan kendala (jika ada), misalnya:
+Program dijalankan pada xv6 shell:
 
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+```bash
+$ ptest
+Child 2 selesai
+Child 1 selesai
+Parent selesai
+```
+
+📸 Screenshot hasil uji:
+![Hasil Uji Modul 2](./Screenshoot/HasilModul2.png)
 
 ---
 
 ## 📚 Referensi
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
-* Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
-* Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
-* Stack Overflow, GitHub Issues, diskusi praktikum
+* [MIT xv6 Book (x86)](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
+* [xv6-public GitHub](https://github.com/mit-pdos/xv6-public)
 
 ---
 
+## 📝 Kesimpulan
+
+Dengan implementasi ini:
+
+* Sistem menggunakan **Non-Preemptive Priority Scheduling**
+* Proses dengan angka prioritas terkecil berjalan lebih dulu
+* Pendekatan ini lebih deterministik, tapi kurang adil jika tidak dikombinasikan dengan aging
