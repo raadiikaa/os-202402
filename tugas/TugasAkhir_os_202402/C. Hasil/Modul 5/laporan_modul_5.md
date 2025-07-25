@@ -2,96 +2,77 @@
 
 **Mata Kuliah**: Sistem Operasi
 **Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
+**Nama**: Radika Rismawati Tri Prasaja
+**NIM**: 240202905
 **Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
-
----
+# 🧪 Modul 5 – Audit dan Keamanan Sistem (xv6-public)
 
 ## 📌 Deskripsi Singkat Tugas
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
+**Modul 5 – Audit dan Keamanan Sistem**:  
+Menambahkan fitur audit system call di kernel XV6. Setiap pemanggilan system call dicatat ke dalam *audit log*. Log ini hanya bisa diakses oleh proses dengan PID 1 melalui system call `get_audit_log()`.
 
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
 ---
 
 ## 🛠️ Rincian Implementasi
 
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
+* Menambahkan struktur `audit_entry` dan array `audit_log` di `syscall.c`
+* Menambahkan pencatatan system call dalam fungsi `syscall()` di `syscall.c`
+* Menambahkan system call `get_audit_log()` di `sysproc.c`
+* Mengedit `syscall.c` untuk mendaftarkan syscall baru
+* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendeklarasikan syscall
+* Menambahkan program uji `audit.c`
+* Mengedit `Makefile` untuk menyertakan program `audit`
 
-### Contoh untuk Modul 1:
-
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
 ---
 
 ## ✅ Uji Fungsionalitas
 
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
+Program uji yang digunakan:
 
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+* `audit`: untuk menampilkan isi audit log system call
+
+Pengujian dilakukan dengan menjalankan `audit` sebagai proses dengan PID 1, yakni dengan mengganti `init` shell default menjadi `audit` di `init.c`.
 
 ---
 
 ## 📷 Hasil Uji
 
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
-
-### 📍 Contoh Output `cowtest`:
+### 📍 Output `audit`:
 
 ```
-Child sees: Y
-Parent sees: X
+=== Audit Log ===
+[0] PID=1 SYSCALL=7 TICK=1
+[1] PID=1 SYSCALL=15 TICK=2
+[2] PID=1 SYSCALL=16 TICK=2
+[3] PID=1 SYSCALL=15 TICK=3
+[4] PID=1 SYSCALL=10 TICK=3
+[5] PID=1 SYSCALL=16 TICK=3
+[6] PID=1 SYSCALL=16 TICK=3
+[7] PID=1 SYSCALL=16 TICK=3
+[8] PID=1 SYSCALL=16 TICK=3
+...
 ```
 
-### 📍 Contoh Output `shmtest`:
+📸 **Screenshot** hasil uji (PID 1 menjalankan `audit`):
 
-```
-Child reads: A
-Parent reads: B
-```
-
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
-```
-
-Jika ada screenshot:
-
-```
-![hasil cowtest](./screenshots/cowtest_output.png)
-```
+![hasil audit](./Screenshoot/HasilModul5.png)
 
 ---
 
 ## ⚠️ Kendala yang Dihadapi
 
-Tuliskan kendala (jika ada), misalnya:
-
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+* Jika `audit` dijalankan sebagai user biasa (bukan PID 1), system call `get_audit_log()` mengembalikan error (`-1`)
+* Harus mengubah `init.c` agar proses `audit` dijalankan sebagai proses pertama (PID 1) untuk bisa mengakses log
+* Potensi race condition jika sistem memiliki lebih dari satu CPU (tidak di-handle dalam implementasi sederhana ini)
 
 ---
 
 ## 📚 Referensi
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
 * Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
 * Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
-* Stack Overflow, GitHub Issues, diskusi praktikum
+* Panduan praktikum Modul 5
+* Diskusi rekan dan dokumentasi kode xv6
 
 ---
-
