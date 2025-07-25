@@ -2,96 +2,85 @@
 
 **Mata Kuliah**: Sistem Operasi
 **Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
+**Nama**: Radika Rismawati Tri Prasaja
+**NIM**: 240202905
 **Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
+`(Modul 1 – System Call dan Instrumentasi Kernel)`
 
 ---
 
-## 📌 Deskripsi Singkat Tugas
+# 📌 Deskripsi Singkat Tugas
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
+**Modul 1 – System Call dan Instrumentasi Kernel**  
+Menambahkan dua system call baru:
 
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
----
-
-## 🛠️ Rincian Implementasi
-
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
-
-### Contoh untuk Modul 1:
-
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
----
-
-## ✅ Uji Fungsionalitas
-
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
-
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+1. `getpinfo()` – untuk melihat daftar proses yang aktif, termasuk PID, ukuran memori, dan nama proses.  
+2. `getReadCount()` – untuk menghitung berapa kali system call `read()` dipanggil sejak sistem boot.
 
 ---
 
-## 📷 Hasil Uji
+# 🛠️ Rincian Implementasi
 
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
-
-### 📍 Contoh Output `cowtest`:
-
-```
-Child sees: Y
-Parent sees: X
-```
-
-### 📍 Contoh Output `shmtest`:
-
-```
-Child reads: A
-Parent reads: B
-```
-
-### 📍 Contoh Output `chmodtest`:
-
-```
-Write blocked as expected
-```
-
-Jika ada screenshot:
-
-```
-![hasil cowtest](./screenshots/cowtest_output.png)
-```
+* Menambahkan dua system call baru:
+  - Implementasi `sys_getpinfo` di `sysproc.c`
+  - Implementasi `sys_getReadCount` di `sysfile.c`
+* Menambahkan deklarasi di:
+  - `syscall.h` – mendefinisikan syscall numbers baru
+  - `user.h` – deklarasi fungsi syscall agar bisa dipanggil user-space
+  - `usys.S` – makro SYSCALL untuk dua fungsi baru
+* Menambahkan struktur `struct pinfo` di `proc.h` untuk menyimpan daftar proses.
+* Menambahkan counter global `readcount` di kernel
+* Menambahkan locking menggunakan `spinlock` untuk mengakses ptable secara aman
+* Program uji:
+  - `ptest.c` – mencetak informasi proses aktif (menguji `getpinfo()`)
+  - `rtest.c` – mencetak `readcount` sebelum dan sesudah melakukan `read()`, menguji `getReadCount()`
 
 ---
 
-## ⚠️ Kendala yang Dihadapi
+# ✅ Uji Fungsionalitas
 
-Tuliskan kendala (jika ada), misalnya:
+Program uji yang digunakan:
 
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+* `ptest` → mencetak informasi proses menggunakan `getpinfo()`
+* `rtest` → menampilkan jumlah pemanggilan `read()` sebelum dan sesudah membaca input
 
 ---
 
-## 📚 Referensi
+# 📷 Hasil Uji
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
+### 📍 Output `ptest`:
+```
+PID     MEM     NAME
+1       12288   init
+2       16384   sh
+3       12288   ptest
+```
+
+### 📍 Output `rtest`:
+```
+Read Count Sebelum: 12
+hello
+Read Count Setelah: 13
+```
+
+📸 Screenshot hasil uji:
+![Hasil Uji Modul 1](./Screenshoot/HasilModul1.png)
+
+---
+
+# ⚠️ Kendala yang Dihadapi
+
+* **Error saat implementasi awal `sys_getpinfo`** karena lupa `#include "spinlock.h"`  
+  ➜ Solusi: tambahkan `#include "spinlock.h"` di `sysproc.c`
+* **Error saat mengakses `ptable` di `sysproc.c`**  
+  ➜ Solusi: deklarasikan ulang `extern struct { ... } ptable` di bagian atas `sysproc.c`
+* **`readcount` tidak dikenali di `sysfile.c`**  
+  ➜ Solusi: tambahkan `extern int readcount;` di atas fungsi `sys_read`
+
+---
+
+# 📚 Referensi
 
 * Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
 * Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
-* Stack Overflow, GitHub Issues, diskusi praktikum
-
----
 
