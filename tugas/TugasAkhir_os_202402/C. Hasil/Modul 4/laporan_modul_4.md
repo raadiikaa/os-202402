@@ -2,96 +2,71 @@
 
 **Mata Kuliah**: Sistem Operasi
 **Semester**: Genap / Tahun Ajaran 2024–2025
-**Nama**: `<Nama Lengkap>`
-**NIM**: `<Nomor Induk Mahasiswa>`
+**Nama**: Radika Rismawati Tri Prasaja
+**NIM**: 240202905
 **Modul yang Dikerjakan**:
-`(Contoh: Modul 1 – System Call dan Instrumentasi Kernel)`
-
----
+# 🧪 Laporan Praktikum Sistem Operasi – Modul 4
 
 ## 📌 Deskripsi Singkat Tugas
 
-Tuliskan deskripsi singkat dari modul yang Anda kerjakan. Misalnya:
+**Modul 4 – Subsistem Kernel Alternatif (xv6-public)**  
+Pada modul ini, dilakukan dua modifikasi terhadap kernel xv6:
+1. Menambahkan system call baru `chmod(path, mode)` untuk mengatur mode akses file secara sederhana (read-only atau read-write).
+2. Menambahkan pseudo-device `/dev/random` yang menghasilkan angka acak saat dibaca.
 
-* **Modul 1 – System Call dan Instrumentasi Kernel**:
-  Menambahkan dua system call baru, yaitu `getpinfo()` untuk melihat proses yang aktif dan `getReadCount()` untuk menghitung jumlah pemanggilan `read()` sejak boot.
 ---
 
 ## 🛠️ Rincian Implementasi
 
-Tuliskan secara ringkas namun jelas apa yang Anda lakukan:
+### ✳️ System Call `chmod()`
+- Menambahkan field `mode` ke `struct inode` (pada `fs.h`).
+- Menambahkan syscall baru di `syscall.h`, `user.h`, `usys.S`, `syscall.c`, dan `sysfile.c`.
+- Menyesuaikan fungsi `filewrite()` di `file.c` agar menolak penulisan jika mode file adalah read-only.
+- Membuat program uji `chmodtest.c` untuk memastikan file read-only tidak bisa ditulis kembali.
 
-### Contoh untuk Modul 1:
+### ✳️ Device `/dev/random`
+- Menambahkan file baru `random.c` berisi fungsi `randomread()` sebagai pembangkit byte acak.
+- Mendaftarkan driver baru pada `devsw[]` di `file.c`.
+- Membuat node device `/dev/random` di `init.c`.
+- Membuat program uji `randomtest.c` untuk membaca 8 byte acak dari device tersebut.
 
-* Menambahkan dua system call baru di file `sysproc.c` dan `syscall.c`
-* Mengedit `user.h`, `usys.S`, dan `syscall.h` untuk mendaftarkan syscall
-* Menambahkan struktur `struct pinfo` di `proc.h`
-* Menambahkan counter `readcount` di kernel
-* Membuat dua program uji: `ptest.c` dan `rtest.c`
 ---
 
 ## ✅ Uji Fungsionalitas
 
-Tuliskan program uji apa saja yang Anda gunakan, misalnya:
-
-* `ptest`: untuk menguji `getpinfo()`
-* `rtest`: untuk menguji `getReadCount()`
-* `cowtest`: untuk menguji fork dengan Copy-on-Write
-* `shmtest`: untuk menguji `shmget()` dan `shmrelease()`
-* `chmodtest`: untuk memastikan file `read-only` tidak bisa ditulis
-* `audit`: untuk melihat isi log system call (jika dijalankan oleh PID 1)
+### Program Uji:
+- `chmodtest`: menguji pembatasan tulis pada file read-only.
+- `randomtest`: menguji pembacaan angka acak dari `/dev/random`.
 
 ---
 
 ## 📷 Hasil Uji
 
-Lampirkan hasil uji berupa screenshot atau output terminal. Contoh:
-
-### 📍 Contoh Output `cowtest`:
-
-```
-Child sees: Y
-Parent sees: X
-```
-
-### 📍 Contoh Output `shmtest`:
-
-```
-Child reads: A
-Parent reads: B
-```
-
-### 📍 Contoh Output `chmodtest`:
-
+### 📍 Output chmodtest:
 ```
 Write blocked as expected
 ```
+![chmodtest output](./Screenshoot/HasilModul4A.png)
 
-Jika ada screenshot:
-
+### 📍 Output randomtest:
 ```
-![hasil cowtest](./screenshots/cowtest_output.png)
+48 67 38 65 32 47 86 21
 ```
+![randomtest output](./Screenshoot/HasilModul4B.png)
 
 ---
 
 ## ⚠️ Kendala yang Dihadapi
 
-Tuliskan kendala (jika ada), misalnya:
-
-* Salah implementasi `page fault` menyebabkan panic
-* Salah memetakan alamat shared memory ke USERTOP
-* Proses biasa bisa akses audit log (belum ada validasi PID)
+- Penempatan field `mode` awalnya dilakukan langsung ke disk layout yang menyebabkan error saat mounting fs lama. Solusinya, hanya digunakan di memori (volatile).
+- Kesalahan pada pendaftaran `devsw[]` menyebabkan `/dev/random` gagal diakses sebelum diperbaiki indeksnya.
 
 ---
 
 ## 📚 Referensi
 
-Tuliskan sumber referensi yang Anda gunakan, misalnya:
-
-* Buku xv6 MIT: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
-* Repositori xv6-public: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
-* Stack Overflow, GitHub Issues, diskusi praktikum
+- Buku xv6: [https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
+- xv6-public GitHub: [https://github.com/mit-pdos/xv6-public](https://github.com/mit-pdos/xv6-public)
+- Modul Praktikum SO 2024 – Modul 4
 
 ---
-
